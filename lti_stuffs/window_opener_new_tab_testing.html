@@ -24,7 +24,6 @@
         const origin = "*";
         let targetFrame = window.opener
         if (!targetFrame) {
-            showError("No opener window found.")
             throw new Error("No opener window found.")
         }
 
