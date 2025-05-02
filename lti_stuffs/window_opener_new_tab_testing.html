@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <title>Testing postMessaging in New Tab LTI Launch</title>
+</head>
+<body>
+<noscript><h1>You need to have JavaScript enable to use this.</h1></noscript>
+<h1>Carga...</h1>
+</body>
+<script>
+    function showError(message) {
+        const h1 = document.createElement("h1")
+        h1.textContent = "Error: " + message
+        document.body.append(h1)
+    }
+
+    function showEventData(event) {
+        const para = document.createElement("p")
+        para.textContent = "Event data: " + JSON.stringify(event.data)
+        document.body.append(para)
+    }
+
+    try {
+        const origin = "*";
+        let targetFrame = window.opener
+        if (!targetFrame) {
+            showError("No opener window found.")
+            throw new Error("No opener window found.")
+        }
+
+        postAndHandle(targetFrame, {
+            "subject": "lti.capabilities"
+        } , platformOrigin, showEventData);
+
+        /**
+         * Send a message and handle its response.
+         * @param target 
+         * @param message
+         * @param origin
+         * @param onResponse
+         */
+        function postAndHandle(target, message, origin, onResponse) {
+            function handler(event) {
+                // This isn't a message we're expecting
+                if (typeof event.data !== "object"){
+                    return;
+                }
+                // Validate it's the response type you expect
+                if (event.data.subject !== message.subject+ ".response") {
+                    return;
+                }
+                // Validate the message id matches the id you sent
+                if ( event.data.subject !== "lti.capabilities.response"  && (event.data.message_id !== message.message_id) ) {
+                    return;
+                }
+                // Validate that the event's origin is the same as the derived platform origin
+                if (origin !== '*' && event.origin !== origin) {
+                    return;
+                }
+                // handle errors
+                if (event.data.error){
+                    // handle errors (message and code)
+                    console.log(event.data.error)
+                    return;
+                }
+                onResponse(event)
+                // Cleanup now we've got our message.
+                window.removeEventListener('message', handler)
+            }
+            window.addEventListener('message', handler); 
+            // Now the handler is setup we can send our message.
+            target.postMessage(message, origin);
+        }
+        
+    } catch (error) {
+        showError(error.message)
+        throw error;
+    }
+</script>
+</html>
